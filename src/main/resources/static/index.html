@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>QuartzDemo</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui@2.0.5/lib/theme-chalk/index.css">
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+    <script src="http://cdn.bootcss.com/vue-resource/1.3.4/vue-resource.js"></script>
+    <script src="https://unpkg.com/element-ui@2.0.5/lib/index.js"></script>
+
+    <style>
+        #top {
+            background:#67C23A;
+            padding:5px;
+            overflow:hidden
+        }
+    </style>
+
+</head>
+<body>
+<div id="test">
+
+    <div id="top">
+        <el-button type="text" @click="search" style="color:white">查询</el-button>
+        <el-button type="text" @click="handleadd" style="color:white">添加</el-button>
+        </span>
+    </div>
+
+    <br/>
+
+    <div style="margin-top:15px">
+
+        <el-table
+                ref="testTable"
+                :data="tableData"
+                style="width:100%"
+                border
+        >
+            <el-table-column
+                    prop="jobName"
+                    label="任务名称"
+                    sortable
+                    sortable>
+            </el-table-column>
+
+            <el-table-column
+                    prop="jobGroup"
+                    label="任务所在组"
+                    sortable>
+            </el-table-column>
+
+            <el-table-column
+                    prop="jobName"
+                    label="任务类名"
+                    sortable>
+            </el-table-column>
+
+            <el-table-column
+                    prop="jobStatus"
+                    label="状态"
+                    sortable>
+            </el-table-column>
+
+            <el-table-column
+                    prop="jobDescription"
+                    label="描述"
+                    sortable>
+            </el-table-column>
+
+            <el-table-column
+                    prop="cronExpression"
+                    label="表达式"
+                    sortable>
+            </el-table-column>
+
+            <el-table-column
+                    prop="createTime"
+                    label="创建时间"
+                    sortable>
+            </el-table-column>
+
+            <el-table-column label="操作" width="300">
+                <template scope="scope">
+                    <el-button
+                            size="small"
+                            type="warning"
+                            @click="handlePause(scope.$index, scope.row)">暂停</el-button>
+
+                    <el-button
+                            size="small"
+                            type="info"
+                            @click="handleResume(scope.$index, scope.row)">恢复</el-button>
+
+                    <el-button
+                            size="small"
+                            type="danger"
+                            @click="handleDelete(scope.$index, scope.row)">删除</el-button>
+
+                    <el-button
+                            size="small"
+                            type="success"
+                            @click="handleUpdate(scope.$index, scope.row)">修改</el-button>
+                </template>
+            </el-table-column>
+        </el-table>
+
+        <!--<div align="center">-->
+            <!--<el-pagination-->
+                    <!--@size-change="handleSizeChange"-->
+                    <!--@current-change="handleCurrentChange"-->
+                    <!--:current-page="currentPage"-->
+                    <!--:page-sizes="[10, 20, 30, 40]"-->
+                    <!--:page-size="pagesize"-->
+                    <!--layout="total, sizes, prev, pager, next, jumper"-->
+                    <!--:total="totalCount">-->
+            <!--</el-pagination>-->
+        <!--</div>-->
+    </div>
+
+    <el-dialog title="添加任务" :visible.syn="dialogFormVisible">
+        <el-form :model="form">
+            <el-form-item label="任务名称" label-width="120px" style="width:100%">
+                <el-input v-model="form.jobName" auto-complete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="任务分组" label-width="120px" style="width:100%">
+                <el-input v-model="form.jobGroup" auto-complete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="表达式" label-width="120px" style="width:100%">
+                <el-input v-model="form.cronExpression" auto-complete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="描述" label-width="120px" style="width:100%">
+                <el-input v-model="form.jobDescription" auto-complete="off"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogFormVisible = false">取 消</el-button>
+            <el-button type="primary" @click="add">确 定</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog title="修改任务" :visible.syn="updateFormVisible">
+        <el-form :model="updateform">
+            <el-form-item label="表达式" label-width="120px" style="width:100%">
+                <el-input v-model="updateform.cronExpression" auto-complete="off"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="updateFormVisible = false">取 消</el-button>
+            <el-button type="primary" @click="update">确 定</el-button>
+        </div>
+    </el-dialog>
+
+</div>
+
+<footer align="center">
+    <p>© Quartz 任务管理</p>
+</footer>
+
+<script>
+    var vue = new Vue({
+        el:"#test",
+        data: {
+            //表格当前页数据
+            tableData: [],
+
+            //请求的URL
+            url:'http://127.0.0.1:11111/job/list',
+
+            //添加对话框默认可见性
+            dialogFormVisible: false,
+
+            //修改对话框默认可见性
+            updateFormVisible: false,
+
+            //提交的表单
+            form: {
+                jobName: '',
+                jobGroup: '',
+                cronExpression: '',
+                jobDescription: '',
+            },
+
+            updateform: {
+                jobName: '',
+                jobGroup: '',
+                cronExpression: '',
+                jobDescription: '',
+            },
+        },
+
+        methods: {
+            //从服务器读取数据
+            loadData: function(){
+                this.$http.get('http://127.0.0.1:11111/job/list').then(function(res){
+                    console.log(res)
+                    this.tableData = res.body;
+                    // this.totalCount = res.body.number;
+                },function(){
+                    console.log('failed');
+                });
+            },
+
+            //单行删除
+            handleDelete: function(index, row) {
+                this.$http.post('http://127.0.0.1:11111/job/del/'+row.jobName+'/' +
+                    row.jobGroup).then(function(res){
+                    if(res.status == 200){
+                        this.$message({
+                            message: '任务删除成功',
+                            type: 'success'
+                        });
+                    }else{
+                        this.$message.error('任务删除失败');
+                    }
+                    this.loadData();
+                },function(){
+                    this.$message.error('任务删除失败');
+                });
+            },
+
+            //暂停任务
+            handlePause: function(index, row){
+                this.$http.post('http://127.0.0.1:11111/job/pause/'+row.jobName+'/' +
+                    row.jobGroup).then(function(res){
+                        if(res.status == 200){
+                            this.$message({
+                                message: '任务暂停成功',
+                                type: 'success'
+                            });
+                        }else{
+                            this.$message.error('任务暂停失败');
+                        }
+
+                    this.loadData();
+                },function(){
+                    this.$message.error('暂停失败');
+                });
+            },
+
+            //恢复任务
+            handleResume: function(index, row){
+                this.$http.post('http://127.0.0.1:11111/job/resume/'+row.jobName+'/' +
+                    row.jobGroup).then(function(res){
+                    if(res.status == 200){
+                        this.$message({
+                            message: '任务恢复成功',
+                            type: 'success'
+                        });
+                    }else{
+                        this.$message.error('任务恢复失败');
+                    }
+                    this.loadData();
+                },function(){
+                    this.$message.error('任务恢复失败');
+                });
+            },
+
+            //搜索
+            search: function(){
+                this.loadData();
+            },
+
+            //弹出对话框
+            handleadd: function(){
+                this.dialogFormVisible = true;
+            },
+
+            //添加
+            add: function(){
+                this.$http.post ('http://127.0.0.1:11111/job/add',
+                    {"jobName":this.form.jobName,
+                    "jobGroup":this.form.jobGroup,
+                        "jobDescription":this.form.jobDescription,
+                        "cronExpression":this.form.cronExpression}
+                        ,
+                    {headers:{
+                            'Content-Type':'application/json'
+                        }}).then(function(res){
+                    if(res.status == 200){
+                        this.$message({
+                            message: '任务添加成功',
+                            type: 'success'
+                        });
+                    }else{
+                        this.$message.error('任务添加失败');
+                    }
+                    this.loadData();
+                    this.dialogFormVisible = false;
+                },function(){
+                    this.$message.error('任务添加失败');
+                });
+            },
+
+            //更新
+            handleUpdate: function(index, row){
+                console.log(row)
+                this.updateFormVisible = true;
+                this.updateform.jobName = row.jobName;
+                this.updateform.jobGroup = row.jobGroup;
+            },
+
+            //更新任务
+            update: function(){
+                this.$http.post ('http://127.0.0.1:11111/job/add',
+                    {"jobName":this.updateform.jobName,
+                        "jobGroup":this.updateform.jobGroup,
+                        "jobDescription":this.updateform.jobDescription,
+                        "cronExpression":this.updateform.cronExpression}
+                    ,
+                    {headers:{
+                            'Content-Type':'application/json'
+                        }}).then(function(res){
+                    if(res.status == 200){
+                        this.$message({
+                            message: '任务修改成功',
+                            type: 'success'
+                        });
+                    }else{
+                        this.$message.error('任务修改失败');
+                    }
+                    this.loadData();
+                    this.dialogFormVisible = false;
+                },function(){
+                    this.$message.error('任务修改失败');
+                });
+
+            },
+
+        },
+
+
+    });
+
+    //载入数据
+    vue.loadData();
+</script>
+
+</body>
+</html>

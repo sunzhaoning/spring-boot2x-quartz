@@ -1,0 +1,39 @@
+spring:
+  quartz:
+    job-store-type: jdbc
+    #初始化表
+    jdbc:
+      initialize-schema: never
+    #属性配置
+    properties:
+      org:
+        quartz:
+          scheduler:
+            #调度器实例名称
+            instanceName: QuartzScheduler
+            #调度器实例编号自动生成
+            instanceId: AUTO
+          jobStore:
+            #持久化方式配置
+            class: org.quartz.impl.jdbcjobstore.JobStoreTX
+            #持久化方式配置数据驱动，MySQL数据库
+            driverDelegateClass: org.quartz.impl.jdbcjobstore.StdJDBCDelegate
+            #quartz相关数据表前缀名
+            tablePrefix: QRTZ_
+            #数据源 随便取
+            dataSource: mysql
+            #是否加入集群
+            isClustered: true
+            #调度实例失效的检查时间间隔
+            clusterCheckinInterval: 10000
+            #JobDataMaps是否都为String类型
+            useProperties: false
+          #数据源配置 也可以直接使用此配置方式
+          dataSource:
+            mysql:
+              driver: com.mysql.cj.jdbc.Driver
+              URL: jdbc:mysql://mysql:3306/job?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowMultiQueries=true
+              user: root
+              password: 123456
+              #允许最大连接
+              maxConnections: 10
